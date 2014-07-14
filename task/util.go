@@ -1,4 +1,4 @@
-package dronecluster
+package task
 
 import (
 	"bytes"
@@ -6,6 +6,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+
+	js "github.com/bitly/go-simplejson"
+	"github.com/juju/errors"
 )
 
 type Job struct {
@@ -32,26 +35,26 @@ type Job struct {
 }
 
 type JobHelper struct {
-	server       string
+	Server       string
 	t            http.Transport //reuse connection
-	executorUrls string
+	ExecutorUrls string
 }
 
-func (jh *JobHelper) getCreateJobUrl(server string) string {
-	return server + "/job"
+func (jh *JobHelper) getCreateJobUrl() string {
+	return jh.Server + "/job"
 }
 
 func (jh *JobHelper) getRunJobUrl(j *Job) string {
-	return jh.server + "/job/run/" + strconv.Itoa(int(j.Id))
+	return jh.Server + "/job/run/" + strconv.Itoa(int(j.Id))
 }
 
 func (jh *JobHelper) BuildRepoJob(repo string) *Job {
 	return &Job{
-		Executor:      "shell_executor",
-		ExecutorFlags: "build.sh " + repo,
+		Executor:      "./example_executor",
+		ExecutorFlags: "./startdrone.sh " + repo,
 		Owner:         "CI ROBOT",
 		Name:          repo,
-		Uris:          jh.executorUrls,
+		Uris:          jh.ExecutorUrls,
 	}
 }
 
@@ -60,29 +63,35 @@ func (jh *JobHelper) CreateJob(j *Job) error {
 	c := http.Client{Transport: &jh.t}
 	buf, err := json.Marshal(j)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
-	resp, err := c.Post(jh.server, "text/json", bytes.NewReader(buf))
+	resp, err := c.Post(jh.getCreateJobUrl(), "text/json", bytes.NewReader(buf))
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	defer resp.Body.Close()
 
 	buf, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
-	//decode whole job information
-	var job Job
-	err = json.Unmarshal(buf, &job)
+	obj, err := js.NewJson(buf)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
-	*j = job
+	id, ok := obj.Get("data").CheckGet("id")
+	if ok {
+		println(id)
+	}
+
+	j.Id, err = id.Int64()
+	if err != nil {
+		return errors.Trace(err)
+	}
 
 	return nil
 }
@@ -92,14 +101,14 @@ func (jh *JobHelper) RunJob(j *Job) error {
 	buf := []byte("{}") //empty json for now
 	resp, err := c.Post(jh.getRunJobUrl(j), "text/json", bytes.NewReader(buf))
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	defer resp.Body.Close()
 
 	buf, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 
 	return nil

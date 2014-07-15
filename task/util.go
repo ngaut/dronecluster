@@ -51,7 +51,7 @@ func (jh *JobHelper) getRunJobUrl(j *Job) string {
 func (jh *JobHelper) BuildRepoJob(repo string) *Job {
 	return &Job{
 		Executor:      "./shell_executor",
-		ExecutorFlags: "./startdrone.sh " + repo,
+		ExecutorFlags: "./startdrone.sh " + repo + " >>.output 2>>.output",
 		Owner:         "CI ROBOT",
 		Name:          repo,
 		Uris:          jh.ExecutorUrls,

@@ -66,7 +66,7 @@ func (jh *JobHelper) CreateJob(j *Job) error {
 		return errors.Trace(err)
 	}
 
-	resp, err := c.Post(jh.getCreateJobUrl(), "text/json", bytes.NewReader(buf))
+	resp, err := c.Post(jh.getCreateJobUrl(), "application/json", bytes.NewReader(buf))
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -99,7 +99,7 @@ func (jh *JobHelper) CreateJob(j *Job) error {
 func (jh *JobHelper) RunJob(j *Job) error {
 	c := http.Client{Transport: &jh.t}
 	buf := []byte("{}") //empty json for now
-	resp, err := c.Post(jh.getRunJobUrl(j), "text/json", bytes.NewReader(buf))
+	resp, err := c.Post(jh.getRunJobUrl(j), "application/json", bytes.NewReader(buf))
 	if err != nil {
 		return errors.Trace(err)
 	}
